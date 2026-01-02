@@ -8,6 +8,9 @@ export default function SignupPage() {
     password: "",
   });
 
+  // 📝 API Base URL variable
+  const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL;
+
   const handleChange = (e: any) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
@@ -15,7 +18,8 @@ export default function SignupPage() {
   const handleSubmit = async (e: any) => {
     e.preventDefault();
 
-    const res = await fetch("http://localhost:5000/signup", {
+    // Localhost badal kar API_BASE_URL kar diya
+    const res = await fetch(`${API_BASE_URL}/signup`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(form),

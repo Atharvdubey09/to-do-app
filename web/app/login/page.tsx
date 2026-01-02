@@ -7,14 +7,18 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
+  // 📝 API Base URL variable
+  const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL;
+
   const login = async () => {
-    const res = await fetch("http://localhost:5000/login", {
+    // Localhost ko badal kar API_BASE_URL kar diya
+    const res = await fetch(`${API_BASE_URL}/login`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email, password }),
     });
 
-    const data = await res.json()
+    const data = await res.json();
 
     if (res.ok) {
       localStorage.setItem("token", data.token);

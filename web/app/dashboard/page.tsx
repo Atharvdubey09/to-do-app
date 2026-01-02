@@ -8,23 +8,28 @@ export default function Dashboard() {
   const [todo, setTodo] = useState("");
   const [todos, setTodos] = useState<Array<{ id: string; title: string }>>([]);
 
+  // 📝 API Base URL variable mein store kar lete hain
+  const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL;
+
   const token = typeof window !== "undefined" && localStorage.getItem("token");
 
   // 🔐 Fetch user + todos
   useEffect(() => {
     if (!token) return router.push("/login");
 
-    fetch("http://localhost:5000/dashboard", {
+    // Localhost ki jagah API_BASE_URL use kiya
+    fetch(`${API_BASE_URL}/dashboard`, {
       headers: { Authorization: `Bearer ${token}` },
     })
       .then((res) => res.json())
-      .then((data) => setUser(data.user));
+      .then((data) => setUser(data.user))
+      .catch(err => console.log("Fetch error:", err));
 
     fetchTodos();
   }, []);
 
   const fetchTodos = async () => {
-    const res = await fetch("http://localhost:5000/todos", {
+    const res = await fetch(`${API_BASE_URL}/todos`, {
       headers: { Authorization: `Bearer ${token}` },
     });
     const data = await res.json();
@@ -34,7 +39,7 @@ export default function Dashboard() {
   const addTodo = async () => {
     if (!todo) return;
 
-    await fetch("http://localhost:5000/todos", {
+    await fetch(`${API_BASE_URL}/todos`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -46,16 +51,16 @@ export default function Dashboard() {
     setTodo("");
     fetchTodos();
   };
-//to do api se delete krna hai
+
   const deleteTodo = async (id: string) => {
     const confirmDelete = window.confirm(
-    "Are you sure you want to delete this todo?"
-  );
+      "Are you sure you want to delete this todo?"
+    );
 
-  if (!confirmDelete) {
-    return; // ❌ user clicked NO
-  }
-    await fetch(`http://localhost:5000/todos/${id}`, {
+    if (!confirmDelete) {
+      return; 
+    }
+    await fetch(`${API_BASE_URL}/todos/${id}`, {
       method: "DELETE",
       headers: { 
         Authorization: `Bearer ${token}`,
