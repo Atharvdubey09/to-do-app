@@ -63,7 +63,7 @@ export default function SignupPage() {
 
         <input
           name="email"
-          placeholder="Email"
+          placeholder=" enter password "
           type="email"
           required
           className="w-full mb-4 p-3 border rounded-lg text-black"

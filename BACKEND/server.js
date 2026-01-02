@@ -2,17 +2,14 @@ const express = require("express");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const pool = require("./db");
-const authMiddleware = require("./middleware/auth");
-const cors = require('cors');
+const cors = require("cors");
 
 const app = express();
 
-// 1. IMPORTANT: Frontend se JSON data read karne ke liye ye zaruri hai
+/* ================= MIDDLEWARE ================= */
 app.use(express.json());
-
-// 2. UPDATED CORS: Ye Vercel aur Local dono par kaam karega
 app.use(cors({
-  origin: "*", 
+  origin: "*",
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization"]
 }));
@@ -30,7 +27,7 @@ app.post("/signup", async (req, res) => {
     if (!name || !email || !password) {
       return res.status(400).json({ message: "All fields required" });
     }
-m
+
     const existingUser = await pool.query(
       "SELECT id FROM users WHERE email = $1",
       [email]
@@ -85,14 +82,11 @@ app.post("/login", async (req, res) => {
 
     const token = jwt.sign(
       { id: user.id, email: user.email },
-      "MY_SECRET_KEY",
+      process.env.JWT_SECRET,
       { expiresIn: "1h" }
     );
 
-    res.json({
-      message: "Login successful",
-      token,
-    });
+    res.json({ message: "Login successful", token });
 
   } catch (error) {
     console.error(error);
@@ -100,27 +94,21 @@ app.post("/login", async (req, res) => {
   }
 });
 
-// 🔐 VERIFY TOKEN FUNCTION
+/* ================= TOKEN VERIFY ================= */
 function verifyToken(req, res, next) {
   const authHeader = req.headers["authorization"];
+  if (!authHeader) return res.status(401).send("Token missing");
 
-  if (!authHeader) {
-    return res.status(401).send("Token missing");
-  }
+  const token = authHeader.split(" ")[1];
 
-  const token = authHeader.split(" ")[1]; 
-
-  jwt.verify(token, "MY_SECRET_KEY", (err, decoded) => {
-    if (err) {
-      return res.status(401).send("Invalid token");
-    }
-
+  jwt.verify(token, process.env.JWT_SECRET, (err, decoded) => {
+    if (err) return res.status(401).send("Invalid token");
     req.user = decoded;
     next();
   });
 }
 
-/* ================= PROTECTED ROUTES ================= */
+/* ================= DASHBOARD ================= */
 app.get("/dashboard", verifyToken, (req, res) => {
   res.json({
     message: "Welcome to dashboard",
@@ -128,24 +116,20 @@ app.get("/dashboard", verifyToken, (req, res) => {
   });
 });
 
+/* ================= TODOS ================= */
 app.post("/todos", verifyToken, async (req, res) => {
   try {
     const { title } = req.body;
     const userId = req.user.id;
 
-    if (!title) {
-      return res.status(400).send("Title required");
-    }
+    if (!title) return res.status(400).send("Title required");
 
     const result = await pool.query(
       "INSERT INTO todos (user_id, title) VALUES ($1, $2) RETURNING *",
       [userId, title]
     );
 
-    res.json({
-      message: "Todo added",
-      todo: result.rows[0],
-    });
+    res.json({ message: "Todo added", todo: result.rows[0] });
 
   } catch (error) {
     console.error(error);
@@ -155,10 +139,9 @@ app.post("/todos", verifyToken, async (req, res) => {
 
 app.get("/todos", verifyToken, async (req, res) => {
   try {
-    const userId = req.user.id;
     const result = await pool.query(
       "SELECT * FROM todos WHERE user_id = $1 ORDER BY created_at DESC",
-      [userId]
+      [req.user.id]
     );
     res.json(result.rows);
   } catch (error) {
@@ -169,12 +152,9 @@ app.get("/todos", verifyToken, async (req, res) => {
 
 app.delete("/todos/:id", verifyToken, async (req, res) => {
   try {
-    const todoId = req.params.id;
-    const userId = req.user.id;
-
     const result = await pool.query(
       "DELETE FROM todos WHERE id = $1 AND user_id = $2 RETURNING *",
-      [todoId, userId]
+      [req.params.id, req.user.id]
     );
 
     if (result.rows.length === 0) {
