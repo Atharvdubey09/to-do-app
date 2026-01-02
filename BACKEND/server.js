@@ -6,26 +6,31 @@ const authMiddleware = require("./middleware/auth");
 const cors = require('cors');
 
 const app = express();
-app.use(cors({ origin: true, credentials: true }));
+
+// 1. IMPORTANT: Frontend se JSON data read karne ke liye ye zaruri hai
+app.use(express.json());
+
+// 2. UPDATED CORS: Ye Vercel aur Local dono par kaam karega
+app.use(cors({
+  origin: "*", 
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"]
+}));
 
 /* ================= HOME ================= */
 app.get("/", (req, res) => {
-  res.send("Server OK");
+  res.send("Server OK - Backend is Live 🚀");
 });
-
 
 /* ================= SIGNUP ================= */
 app.post("/signup", async (req, res) => {
   try {
-    // 1️⃣ Frontend se data lo
     const { name, email, password } = req.body;
 
-    // 2️⃣ Basic validation
     if (!name || !email || !password) {
       return res.status(400).json({ message: "All fields required" });
     }
 
-    // 3️⃣ Check email already exists
     const existingUser = await pool.query(
       "SELECT id FROM users WHERE email = $1",
       [email]
@@ -35,16 +40,13 @@ app.post("/signup", async (req, res) => {
       return res.status(409).json({ message: "Email already exists" });
     }
 
-    // 4️⃣ Password hashing
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // 5️⃣ Insert user
     const result = await pool.query(
       "INSERT INTO users (name, email, password) VALUES ($1, $2, $3) RETURNING id, name, email",
       [name, email, hashedPassword]
     );
 
-    // 6️⃣ Response
     res.status(201).json({
       message: "Signup successful",
       user: result.rows[0],
@@ -58,16 +60,13 @@ app.post("/signup", async (req, res) => {
 
 /* ================= LOGIN ================= */
 app.post("/login", async (req, res) => {
-  console.log("Login request body:", req.body);
   try {
-    // 1️⃣ FRONTEND SE DATA LO
     const { email, password } = req.body;
 
     if (!email || !password) {
       return res.status(400).json({ message: "Email & password required" });
     }
 
-    // 2️⃣ USER FETCH
     const userResult = await pool.query(
       "SELECT * FROM users WHERE email = $1",
       [email]
@@ -78,22 +77,18 @@ app.post("/login", async (req, res) => {
     }
 
     const user = userResult.rows[0];
-
-    // 3️⃣ PASSWORD MATCH
     const isMatch = await bcrypt.compare(password, user.password);
 
     if (!isMatch) {
       return res.status(401).json({ message: "Invalid password" });
     }
 
-    // 4️⃣ JWT CREATE
     const token = jwt.sign(
       { id: user.id, email: user.email },
       "MY_SECRET_KEY",
       { expiresIn: "1h" }
     );
 
-    // 5️⃣ RESPONSE
     res.json({
       message: "Login successful",
       token,
@@ -105,14 +100,6 @@ app.post("/login", async (req, res) => {
   }
 });
 
-
-
-/* ================= SERVER ================= */
-app.listen(5000, () => {
-  console.log("Server running on port 5000");
-});
-
-
 // 🔐 VERIFY TOKEN FUNCTION
 function verifyToken(req, res, next) {
   const authHeader = req.headers["authorization"];
@@ -121,7 +108,7 @@ function verifyToken(req, res, next) {
     return res.status(401).send("Token missing");
   }
 
-  const token = authHeader.split(" ")[1]; // Bearer TOKEN
+  const token = authHeader.split(" ")[1]; 
 
   jwt.verify(token, "MY_SECRET_KEY", (err, decoded) => {
     if (err) {
@@ -133,7 +120,7 @@ function verifyToken(req, res, next) {
   });
 }
 
-// 🧠 PHIR ROUTE
+/* ================= PROTECTED ROUTES ================= */
 app.get("/dashboard", verifyToken, (req, res) => {
   res.json({
     message: "Welcome to dashboard",
@@ -144,7 +131,7 @@ app.get("/dashboard", verifyToken, (req, res) => {
 app.post("/todos", verifyToken, async (req, res) => {
   try {
     const { title } = req.body;
-    const userId = req.user.id; // JWT se
+    const userId = req.user.id;
 
     if (!title) {
       return res.status(400).send("Title required");
@@ -166,25 +153,20 @@ app.post("/todos", verifyToken, async (req, res) => {
   }
 });
 
-//get todos route
 app.get("/todos", verifyToken, async (req, res) => {
   try {
     const userId = req.user.id;
-
     const result = await pool.query(
       "SELECT * FROM todos WHERE user_id = $1 ORDER BY created_at DESC",
       [userId]
     );
-
     res.json(result.rows);
-
   } catch (error) {
     console.error(error);
     res.status(500).send("Failed to fetch todos");
   }
 });
 
-//delete todo route
 app.delete("/todos/:id", verifyToken, async (req, res) => {
   try {
     const todoId = req.params.id;
@@ -200,13 +182,14 @@ app.delete("/todos/:id", verifyToken, async (req, res) => {
     }
 
     res.send("Todo deleted");
-
   } catch (error) {
     console.error(error);
     res.status(500).send("Failed to delete todo");
   }
 });
 
-
-
-
+/* ================= SERVER ================= */
+const PORT = process.env.PORT || 5000;
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
+});
