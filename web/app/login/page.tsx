@@ -12,7 +12,8 @@ export default function LoginPage() {
 
   const login = async () => {
     // Localhost ko badal kar API_BASE_URL kar diya
-    const res = await fetch(`${API_BASE_URL}/login`, {
+    console.log("Backend Link:", API_BASE_URL);
+    const res = await fetch(`${process.env.API_BASE_URL}/login`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email, password }),
