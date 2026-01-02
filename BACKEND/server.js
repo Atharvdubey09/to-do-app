@@ -30,7 +30,7 @@ app.post("/signup", async (req, res) => {
     if (!name || !email || !password) {
       return res.status(400).json({ message: "All fields required" });
     }
-
+m
     const existingUser = await pool.query(
       "SELECT id FROM users WHERE email = $1",
       [email]

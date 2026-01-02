@@ -8,9 +8,6 @@ export default function SignupPage() {
     password: "",
   });
 
-  // 📝 API Base URL variable
-  const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL;
-
   const handleChange = (e: any) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
@@ -18,15 +15,34 @@ export default function SignupPage() {
   const handleSubmit = async (e: any) => {
     e.preventDefault();
 
-    // Localhost badal kar API_BASE_URL kar diya
-    const res = await fetch(`${API_BASE_URL}/signup`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(form),
-    });
+    // 1. URL ko yahan define karein taaki ensure ho ki ye variable se aa raha hai
+    const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL;
+    
+    // Debugging ke liye: Browser console (F12) mein check karein ye kya print kar raha hai
+    console.log("Connecting to:", `${API_BASE_URL}/signup`);
 
-    const data = await res.json();
-    alert(data.message);
+    try {
+      const res = await fetch(`${API_BASE_URL}/signup`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(form),
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json();
+        alert(`Error: ${errorData.message}`);
+        return;
+      }
+
+      const data = await res.json();
+      alert("Success: " + data.message);
+      // Success ke baad user ko login par bhej sakte hain
+      window.location.href = "/login";
+
+    } catch (error) {
+      console.error("FETCH ERROR:", error);
+      alert("Failed to connect to server. Check your internet or API URL.");
+    }
   };
 
   return (
@@ -35,14 +51,13 @@ export default function SignupPage() {
         onSubmit={handleSubmit}
         className="bg-white p-8 rounded-2xl shadow-xl w-[350px]"
       >
-        <h2 className="text-2xl font-bold text-center mb-6">
-          Create Account
-        </h2>
+        <h2 className="text-2xl font-bold text-center mb-6">Create Account</h2>
 
         <input
           name="name"
           placeholder="Full Name"
-          className="w-full mb-4 p-3 border rounded-lg"
+          required
+          className="w-full mb-4 p-3 border rounded-lg text-black"
           onChange={handleChange}
         />
 
@@ -50,7 +65,8 @@ export default function SignupPage() {
           name="email"
           placeholder="Email"
           type="email"
-          className="w-full mb-4 p-3 border rounded-lg"
+          required
+          className="w-full mb-4 p-3 border rounded-lg text-black"
           onChange={handleChange}
         />
 
@@ -58,20 +74,21 @@ export default function SignupPage() {
           name="password"
           placeholder="Password"
           type="password"
-          className="w-full mb-4 p-3 border rounded-lg"
+          required
+          className="w-full mb-4 p-3 border rounded-lg text-black"
           onChange={handleChange}
         />
 
         <button
           type="submit"
-          className="w-full bg-blue-600 text-white p-3 rounded-lg hover:bg-blue-700 transition"
+          className="w-full bg-blue-600 text-white p-3 rounded-lg hover:bg-blue-700 transition font-bold"
         >
           Sign Up
         </button>
 
         <p className="text-sm text-center mt-4">
           Already have an account?{" "}
-          <a href="/login" className="text-blue-600 font-semibold">
+          <a href="/login" className="text-blue-600 font-semibold underline">
             Login
           </a>
         </p>
